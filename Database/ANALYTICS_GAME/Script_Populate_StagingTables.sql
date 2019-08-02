@@ -6,7 +6,7 @@ USE WAREHOUSE PINNACLES;
 --Create S3 stage poiting to the AWS S3 bucket location
 --This is where the game_data.csv file lives and is the starting point of this load
 CREATE STAGE IF NOT EXISTS BISHAL_TEST.BISHAL_STAGE URL='s3://98point6' 
-CREDENTIALS=(AWS_KEY_ID='AKIAI63D7ZTJCJC2XKRA' AWS_SECRET_KEY='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') 
+CREDENTIALS=(AWS_KEY_ID='AKIAI63D7ZTJCJC2XKRA' AWS_SECRET_KEY='<Get from AWS Portal>') 
 
 --Create staging table in Snowflake Database to stage the game_data.csv data imported from the AWS s3 stage
 CREATE TABLE IF NOT EXISTS BISHAL_TEST.DTG_STAGING (GAME_ID VARCHAR(500), PLAYER_ID VARCHAR(500), MOVE_NUMBER INT,COLUMN_NUMBER SMALLINT,RESULT VARCHAR(5));
@@ -34,7 +34,7 @@ FORCE=FALSE;
 --Create S3 stage poiting to the AWS S3 bucket location
 --This is where the player data JSON will be staged after it is downloaded from the get api requests
 CREATE OR REPLACE STAGE BISHAL_TEST.BISHAL_STAGE URL='s3://98point6' 
-CREDENTIALS=(AWS_KEY_ID='AKIAI63D7ZTJCJC2XKRA' AWS_SECRET_KEY='0CTN3QeSfW5yXplKUV+8PiubVKfZjNi6EKHL6mq1') 
+CREDENTIALS=(AWS_KEY_ID='AKIAI63D7ZTJCJC2XKRA' AWS_SECRET_KEY='<Get from AWS Portal>') 
 
 --Create JSON file format to be used to import the player json file into a sql variant staging table
 CREATE FILE FORMAT IF NOT EXISTS "ODS_DEV"."BISHAL_TEST".FORMAT_NDJSON TYPE = 'JSON' COMPRESSION = 'AUTO' ENABLE_OCTAL = FALSE ALLOW_DUPLICATE = FALSE STRIP_OUTER_ARRAY = FALSE STRIP_NULL_VALUES = FALSE IGNORE_UTF8_ERRORS = FALSE COMMENT = 'File format for importing Semi-Structured data into Snowfake';
