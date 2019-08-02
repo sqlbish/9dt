@@ -1,0 +1,170 @@
+USE ODS_DEV;
+USE ROLE BI_DBA;
+USE SCHEMA BISHAL_DM;
+USE WAREHOUSE PINNACLES;
+
+
+--Populate Dim Player table
+MERGE INTO BISHAL_DM.DIM_PLAYER AS T 
+USING BISHAL_TEST.PLAYER_PROFILE_STAGING AS S 
+     ON T.PLAYER_ID = S.PLAYER_ID  
+WHEN MATCHED 
+        AND
+        (T.FIRST_NAME <> S.FIRST_NAME OR
+        T.LAST_NAME <> S.FIRST_NAME OR
+        T.EMAIL <> S.EMAIL OR
+        T.NATIONALITY <> S.NATIONALITY)
+THEN UPDATE SET 
+        T.FIRST_NAME = S.FIRST_NAME,
+        T.LAST_NAME = S.FIRST_NAME,
+        T.EMAIL = S.EMAIL,
+        T.NATIONALITY = S.NATIONALITY,
+        T.UPDATE_DATE = CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP()),
+        T.UPDATE_BY = CURRENT_USER()
+WHEN NOT MATCHED THEN INSERT 
+     (	
+        PLAYER_ID,
+        FIRST_NAME,
+        LAST_NAME,
+        EMAIL,
+        NATIONALITY,
+        CREATE_DATE,
+        CREATE_BY  
+     ) 
+     VALUES
+     ( 
+        S.PLAYER_ID,
+        S.FIRST_NAME,
+        S.LAST_NAME,
+        S.EMAIL,
+        S.NATIONALITY,
+        CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP()),
+        CURRENT_USER()
+     );
+     
+--SELECT * FROM BISHAL_DM.DIM_PLAYER;     
+
+--Populate Dim Game table
+MERGE INTO BISHAL_DM.DIM_GAME AS T --Doing merge in case there are any game attributes to update in future
+USING ( SELECT DISTINCT GAME_ID FROM BISHAL_TEST.DTG_STAGING) AS S 
+     ON T.GAME_ID = S.GAME_ID  
+WHEN MATCHED THEN UPDATE SET 
+        T.UPDATE_DATE = CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP()),
+        T.UPDATE_BY = CURRENT_USER()
+WHEN NOT MATCHED THEN INSERT 
+     (	
+        GAME_ID,
+        CREATE_DATE,
+        CREATE_BY  
+     ) 
+     VALUES
+     ( 
+        S.GAME_ID,
+        CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP()),
+        CURRENT_USER()
+     );
+     
+-- SELECT * FROM BISHAL_DM.DIM_GAME ORDER BY 1     
+
+--Populate Dim Result table
+MERGE INTO BISHAL_DM.DIM_RESULT AS T --Doing merge in case there are any additional result table attributes to update in future
+USING (SELECT DISTINCT RESULT FROM BISHAL_TEST.DTG_STAGING WHERE RESULT IS NOT NULL) AS S 
+     ON IFNULL(T.RESULT,'') = IFNULL(S.RESULT, '')
+WHEN MATCHED THEN UPDATE SET 
+        T.UPDATE_DATE = CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP()),
+        T.UPDATE_BY = CURRENT_USER()
+WHEN NOT MATCHED THEN INSERT 
+     (	
+        RESULT,
+        CREATE_DATE,
+        CREATE_BY  
+     ) 
+     VALUES
+     ( 
+        S.RESULT,
+        CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP()),
+        CURRENT_USER()
+     );
+     
+-- SELECT * FROM BISHAL_DM.DIM_RESULT ORDER BY 1 
+
+--Populate Fact Game table
+INSERT INTO BISHAL_DM.FACT_GAME 
+         ( DIMGAME_KEY,
+          DIMPLAYER_KEY,
+          MOVE_NUMBER,
+          COLUMN_NUMBER,
+          CREATE_DATE,
+          CREATE_BY
+          )
+SELECT 
+        DG.DIMGAME_KEY,
+        --DTG.GAME_ID,
+        DP.DIMPLAYER_KEY,
+        --DTG.PLAYER_ID,
+        DTG.MOVE_NUMBER,
+        DTG.COLUMN_NUMBER,
+        CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP()),
+        CURRENT_USER
+FROM BISHAL_TEST.DTG_STAGING DTG --Staged source data
+LEFT JOIN BISHAL_DM.DIM_GAME DG --Dim Game
+        ON DTG.GAME_ID = DG.GAME_ID 
+LEFT JOIN BISHAL_DM.DIM_PLAYER DP --Dim Player
+        ON DTG.PLAYER_ID = DP.PLAYER_ID;              
+
+--select * from BISHAL_DM.FACT_GAME;
+
+--Update Fact Game table as needed ( May depend on business process/need for update in measure)
+UPDATE BISHAL_DM.FACT_GAME FG --Update syntax is Snowflake is different TSQL
+SET
+        FG.MOVE_NUMBER = FGU.MOVE_NUMBER,
+        FG.COLUMN_NUMBER = FGU.COLUMN_NUMBER,
+        FG.UPDATE_DATE = CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP()),
+        FG.UPDATE_BY = CURRENT_USER
+FROM
+        (        
+        SELECT 
+                DG.DIMGAME_KEY,
+                DP.DIMPLAYER_KEY,
+                DTG.MOVE_NUMBER,
+                DTG.COLUMN_NUMBER,
+                CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP()),
+                CURRENT_USER
+        FROM BISHAL_TEST.DTG_STAGING DTG --Staged source data
+        LEFT JOIN BISHAL_DM.DIM_GAME DG --Dim Game
+                ON DTG.GAME_ID = DG.GAME_ID 
+        LEFT JOIN BISHAL_DM.DIM_PLAYER DP --Dim Player
+                ON DTG.PLAYER_ID = DP.PLAYER_ID
+                ) FGU
+WHERE
+        FG.DIMGAME_KEY = FGU.DIMGAME_KEY
+        AND FG.DIMPLAYER_KEY = FGU.DIMPLAYER_KEY
+        AND FG.MOVE_NUMBER <> FGU.MOVE_NUMBER
+        AND FG.COLUMN_NUMBER <> FG.COLUMN_NUMBER;              
+
+--Populate Fact Result table
+INSERT INTO BISHAL_DM.FACT_RESULT 
+         (DIMGAME_KEY,
+          DIMRESULT_KEY,
+          CREATE_DATE,
+          CREATE_BY
+          )
+SELECT 
+        DG.DIMGAME_KEY,
+        --DTG.GAME_ID,
+        DR.DIMRESULT_KEY,
+        --DTG.RESULT,
+        CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP()),
+        CURRENT_USER
+FROM BISHAL_TEST.DTG_STAGING DTG --Staged source data
+LEFT JOIN BISHAL_DM.DIM_GAME DG --Dim Game
+        ON DTG.GAME_ID = DG.GAME_ID 
+LEFT JOIN BISHAL_DM.DIM_RESULT DR --Dim Result
+        ON DTG.RESULT = DR.RESULT
+WHERE DTG.RESULT IS NOT NULL;
+
+--SELECT * FROM BISHAL_DM.FACT_RESULT
+       
+         
+ 
+      
