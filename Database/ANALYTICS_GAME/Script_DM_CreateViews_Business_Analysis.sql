@@ -8,18 +8,25 @@ USE WAREHOUSE DT_MEDIUM;
 --That is, when the ?rst player is choosing a column for their ?rst move, which column most frequently leads to that player winning the game? 
 CREATE VIEW IF NOT EXISTS BISHAL_DM.VW_RankBy_WinningColumn_FirstMove
 AS
-SELECT  FG.COLUMN_NUMBER, 
-        COUNT(*) as CntofFirstMove, 
-        RANK() OVER (ORDER BY COUNT(*) DESC) AS Rank
-        FROM BISHAL_DM.FACT_GAME FG
-JOIN BISHAL_DM.FACT_RESULT FR
-        ON FG.DIMGAME_KEY = FR.DIMGAME_KEY
-JOIN BISHAL_DM.DIM_RESULT DR
-        ON FR.DIMRESULT_KEY = DR.DIMRESULT_KEY
-WHERE DR.RESULT = 'win'
-        AND FG.MOVE_NUMBER = 1
-GROUP BY FG.COLUMN_NUMBER
-ORDER BY RANK;
+SELECT 
+        X.COLUMN_NUMBER,
+        X.CntofFirstMove,
+        X.Rank,
+        CAST(CAST(PERCENT_RANK() OVER(ORDER BY x.CntofFirstMove)as NUMERIC(4,3)) * 100 AS INT) as PctRANK from 
+        (
+        SELECT  FG.COLUMN_NUMBER, 
+                COUNT(*) as CntofFirstMove, 
+                RANK() OVER (ORDER BY COUNT(*) DESC) AS Rank
+                FROM BISHAL_DM.FACT_GAME FG
+        JOIN BISHAL_DM.FACT_RESULT FR
+                ON FG.DIMGAME_KEY = FR.DIMGAME_KEY
+        JOIN BISHAL_DM.DIM_RESULT DR
+                ON FR.DIMRESULT_KEY = DR.DIMRESULT_KEY
+        WHERE DR.RESULT = 'win'
+                AND FG.MOVE_NUMBER = 1
+        GROUP BY FG.COLUMN_NUMBER
+)X
+ORDER BY PctRank DESC;
 
 
 --Query #2, How many games has each nationality participated in? \
