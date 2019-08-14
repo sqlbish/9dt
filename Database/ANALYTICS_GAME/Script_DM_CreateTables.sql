@@ -1,6 +1,7 @@
-USE ODS_DEV;
+USE ANALYTICS_GAME;
 USE ROLE BI_DBA;
-USE WAREHOUSE PINNACLES;
+USE WAREHOUSE DT_SMALL;
+USE SCHEMA BISHAL_DM;
 
 /* ---------------------------------------------------------------------- */
 /* Script generated with: DeZign for Databases V10.0.2                    */
@@ -20,11 +21,6 @@ USE WAREHOUSE PINNACLES;
 /* ---------------------------------------------------------------------- */
 /* Add table "DIM_PLAYER"                                                 */
 /* ---------------------------------------------------------------------- */
-
---New Schema to hold the data warehouse tables for 9dt
-CREATE OR REPLACE SCHEMA BISHAL_DM;
-
-USE SCHEMA BISHAL_DM;
 
 CREATE TABLE IF NOT EXISTS DIM_PLAYER (
     DIMPLAYER_KEY INTEGER AUTOINCREMENT NOT NULL,

@@ -1,7 +1,7 @@
-USE ODS_DEV;
+USE ANALYTICS_GAME;
 USE ROLE BI_DBA;
 USE SCHEMA BISHAL_DM;
-USE WAREHOUSE PINNACLES;
+USE WAREHOUSE DT_MEDIUM;
 
 
 --Query #1 Out of all the games, what is the percentile rank of each column used as the ?rst move in a game? 
